@@ -1,7 +1,7 @@
 """问答服务模块"""
 
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from langchain.chains import RetrievalQA
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
@@ -11,6 +11,11 @@ from dotenv import load_dotenv
 from app.core.config import EMBEDDING_MODEL_NAME, LLM_MODEL_NAME, LLM_PROVIDER, OLLAMA_BASE_URL
 from app.models import LLMProvider, LLMFactory
 from app.core.exceptions import ServiceError, ConfigurationError
+from app.services.retrievers.dense import DenseRetriever
+from app.services.retrievers.sparse import SparseRetriever
+from app.services.retrievers.hybrid import HybridRetriever
+from app.services.fusion import simple_fusion
+from app.services.document_service import load_documents
 
 load_dotenv()
 
@@ -81,21 +86,51 @@ class QAService:
                 f"请检查API密钥配置和网络连接。"
             )
     
-    def create_qa_chain(self, vector_store: FAISS) -> RetrievalQA:
+    def create_retriever(self, vector_store: FAISS, retrieval_mode: str = 'dense', corpus: list = None):
         """
-        创建问答链
+        创建检索器，支持 dense/sparse/hybrid
         参数：
             vector_store: FAISS 向量库实例
+            retrieval_mode: 检索模式（dense/sparse/hybrid）
+            corpus: 稀疏检索语料（list of Document）
+        返回：
+            检索器实例
+        """
+        if retrieval_mode == 'dense':
+            return DenseRetriever(vector_store)
+        elif retrieval_mode == 'sparse':
+            if corpus is None:
+                documents = load_documents()
+                corpus = documents  # 直接传递 Document 对象
+            return SparseRetriever(corpus)
+        elif retrieval_mode == 'hybrid':
+            if corpus is None:
+                documents = load_documents()
+                corpus = documents
+            dense = DenseRetriever(vector_store)
+            sparse = SparseRetriever(corpus)
+            return HybridRetriever(dense, sparse, simple_fusion)
+        else:
+            raise ValueError(f"未知检索模式: {retrieval_mode}")
+
+    def create_qa_chain(self, vector_store: FAISS, retrieval_mode: str = 'dense', corpus: list = None) -> RetrievalQA:
+        """
+        创建问答链，支持混合检索
+        参数：
+            vector_store: FAISS 向量库实例
+            retrieval_mode: 检索模式（dense/sparse/hybrid）
+            corpus: 稀疏检索语料
         返回：
             RetrievalQA: 创建的问答链
         """
         if self.qa_chain is None:
             try:
                 llm = self.load_llm()
+                retriever = self.create_retriever(vector_store, retrieval_mode, corpus)
                 self.qa_chain = RetrievalQA.from_chain_type(
                     llm=llm,
                     chain_type="stuff",
-                    retriever=vector_store.as_retriever(search_kwargs={"k": 2}),
+                    retriever=retriever,
                     return_source_documents=True,
                 )
             except Exception as e:
@@ -190,23 +225,19 @@ def load_llm() -> BaseLLM:
     return service.load_llm()
 
 
-def create_qa_chain(vector_store: FAISS, llm: BaseLLM) -> RetrievalQA:
+def create_qa_chain(vector_store: FAISS, retrieval_mode: str = 'dense', corpus: list = None) -> RetrievalQA:
     """
     创建问答链（向后兼容接口）
     
     参数：
         vector_store: FAISS 向量库实例
-        llm: 大语言模型实例
-        
+        retrieval_mode: 检索模式（dense/sparse/hybrid）
+        corpus: 稀疏检索语料
     返回：
         RetrievalQA: 创建的问答链
     """
-    return RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vector_store.as_retriever(search_kwargs={"k": 2}),
-        return_source_documents=True,
-    )
+    service = QAService()
+    return service.create_qa_chain(vector_store, retrieval_mode, corpus)
 
 
 def ask_question(chain: RetrievalQA, query: str) -> Dict[str, Any]:

@@ -22,6 +22,21 @@ def query():
             )
             return
 
+        # 新增：选择检索模式
+        retrieval_mode = questionary.select(
+            "请选择检索模式:",
+            choices=[
+                {"name": "稠密检索（Dense，仅向量库）", "value": "dense"},
+                {"name": "稀疏检索（Sparse，仅BM25）", "value": "sparse"},
+                {"name": "混合检索（Hybrid，融合两者）", "value": "hybrid"},
+            ]
+        ).ask()
+        if not retrieval_mode:
+            click.secho("未选择检索模式，已退出。", fg="yellow")
+            return
+
+        click.secho(f"已选择检索模式: {retrieval_mode}", fg="cyan")
+
         click.secho("正在加载大语言模型...", fg="blue")
         try:
             llm = qa_service.load_llm()
@@ -31,7 +46,7 @@ def query():
 
         click.secho("正在创建问答链...", fg="blue")
         try:
-            qa_chain = qa_service.create_qa_chain(vector_store, llm)
+            qa_chain = qa_service.create_qa_chain(vector_store, retrieval_mode=retrieval_mode)
         except Exception as e:
             click.secho("创建问答链失败... 错误信息:"+str(e), fg="red")
             return
