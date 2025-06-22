@@ -3,7 +3,7 @@
 import time
 from typing import Optional, Dict, Any
 from langchain.chains import RetrievalQA
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_core.language_models import BaseLLM
 from dotenv import load_dotenv
