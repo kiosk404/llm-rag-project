@@ -16,6 +16,7 @@ from app.services.retrievers.sparse import SparseRetriever
 from app.services.retrievers.hybrid import HybridRetriever
 from app.services.fusion import simple_fusion
 from app.services.document_service import load_documents
+from app.services.rerankers.local_bge_reranker import LocalBGEReranker
 
 load_dotenv()
 
@@ -23,18 +24,22 @@ load_dotenv()
 class QAService:
     """问答服务类"""
     
-    def __init__(self, llm_provider: LLMProvider = None):
+    def __init__(self, llm_provider: LLMProvider = None, reranker: Any = None, use_rerank: bool = False):
         """
         初始化问答服务
         
         参数：
             llm_provider: 大语言模型提供者，如果为 None 则使用配置文件中的默认设置
+            reranker: 重排序器，如果为 None 则不使用重排序
+            use_rerank: 是否使用重排序
         """
         self.llm_provider = llm_provider or self._create_default_provider()
         self.embedding_model = None
         self.qa_chain = None
         self.max_retries = 1
         self.retry_delay = 2  # 秒
+        self.reranker = reranker
+        self.use_rerank = use_rerank
     
     def _create_default_provider(self) -> LLMProvider:
         """创建默认的模型提供者"""
@@ -127,6 +132,13 @@ class QAService:
             try:
                 llm = self.load_llm()
                 retriever = self.create_retriever(vector_store, retrieval_mode, corpus)
+                # 包装 retriever，支持 rerank
+                if self.use_rerank and self.reranker is not None:
+                    orig_get_relevant_documents = retriever._get_relevant_documents
+                    def rerank_wrapper(query):
+                        docs = orig_get_relevant_documents(query)
+                        return self.reranker.rerank(query, docs)
+                    retriever._get_relevant_documents = rerank_wrapper
                 self.qa_chain = RetrievalQA.from_chain_type(
                     llm=llm,
                     chain_type="stuff",
@@ -225,7 +237,7 @@ def load_llm() -> BaseLLM:
     return service.load_llm()
 
 
-def create_qa_chain(vector_store: FAISS, retrieval_mode: str = 'dense', corpus: list = None) -> RetrievalQA:
+def create_qa_chain(vector_store: FAISS, retrieval_mode: str = 'dense', corpus: list = None, use_rerank: bool = False) -> RetrievalQA:
     """
     创建问答链（向后兼容接口）
     
@@ -233,10 +245,12 @@ def create_qa_chain(vector_store: FAISS, retrieval_mode: str = 'dense', corpus: 
         vector_store: FAISS 向量库实例
         retrieval_mode: 检索模式（dense/sparse/hybrid）
         corpus: 稀疏检索语料
+        use_rerank: 是否启用重排序
     返回：
         RetrievalQA: 创建的问答链
     """
-    service = QAService()
+    reranker = LocalBGEReranker() if use_rerank else None
+    service = QAService(reranker=reranker, use_rerank=use_rerank)
     return service.create_qa_chain(vector_store, retrieval_mode, corpus)
 
 

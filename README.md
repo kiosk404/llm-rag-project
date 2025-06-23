@@ -269,6 +269,13 @@ python examples/chunking_demo.py
 
 查看各种分块策略的效果和差异。
 
+### 7. 提前下载 huggingface 的 reranker 模型
+
+```bash
+export HF_ENDPOINT=https://hf-mirror.com
+huggingface-cli download BAAI/bge-reranker-v2-m3
+```
+
 ## 支持的模型
 
 ### 1. 通义千问 (Tongyi)

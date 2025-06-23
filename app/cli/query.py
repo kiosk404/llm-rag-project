@@ -35,7 +35,17 @@ def query():
             click.secho("未选择检索模式，已退出。", fg="yellow")
             return
 
+        # 新增：选择是否启用重排序
+        use_rerank = questionary.confirm(
+            "是否启用重排序（Rerank）以提升答案相关性？",
+            default=True
+        ).ask()
+        if use_rerank is None:
+            click.secho("未选择是否启用重排序，已退出。", fg="yellow")
+            return
+
         click.secho(f"已选择检索模式: {retrieval_mode}", fg="cyan")
+        click.secho(f"重排序功能: {'已启用' if use_rerank else '未启用'}", fg="cyan")
 
         click.secho("正在加载大语言模型...", fg="blue")
         try:
@@ -46,7 +56,7 @@ def query():
 
         click.secho("正在创建问答链...", fg="blue")
         try:
-            qa_chain = qa_service.create_qa_chain(vector_store, retrieval_mode=retrieval_mode)
+            qa_chain = qa_service.create_qa_chain(vector_store, retrieval_mode=retrieval_mode, use_rerank=use_rerank)
         except Exception as e:
             click.secho("创建问答链失败... 错误信息:"+str(e), fg="red")
             return
@@ -110,8 +120,6 @@ def query():
                     
             except KeyboardInterrupt:
                 click.echo("正在退出...")
-                break
-            finally:
                 break
                 
     except KeyboardInterrupt:

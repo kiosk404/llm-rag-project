@@ -15,3 +15,4 @@ nltk>=3.8
 tiktoken>=0.5.0
 numpy<2.0.0
 langchain-ollama
+flashrank==0.2.5
