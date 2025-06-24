@@ -16,3 +16,6 @@ tiktoken>=0.5.0
 numpy<2.0.0
 langchain-ollama
 flashrank==0.2.5
+rank_bm25>=0.2.2
+FlagEmbedding>=1.2.0
+huggingface_hub>=0.19.0

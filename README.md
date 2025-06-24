@@ -4,6 +4,8 @@
 
 这是一个基于 LangChain 的检索增强生成（RAG）应用，采用现代化的软件架构设计，支持多种大语言模型和文本分块策略。
 
+可以参考博客：https://kiosk007.top/post/rag/
+
 ## 核心功能
 
 ### 1. 多模型支持
@@ -185,47 +187,28 @@ result = robust_llm.invoke("你好")
 
 ## 快速开始
 
-### 1. 安装依赖
-
-#### 方式一：使用安装脚本（推荐）
+### 1. 一键安装
 
 ```bash
-# 运行安装脚本
+# 运行一键安装脚本
 ./install_dependencies.sh
 ```
 
-脚本会自动：
-- 检查Python版本
-- 创建虚拟环境
-- 安装所有依赖
-- 下载可选的spaCy模型和NLTK数据
-- 测试模块导入
-
-#### 方式二：手动安装
-
-```bash
-# 创建虚拟环境
-python -m venv .venv
-
-# 激活虚拟环境
-source .venv/bin/activate  # Linux/Mac
-# 或
-.venv\Scripts\activate     # Windows
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 安装spaCy模型（可选，用于语义分块）
-python -m spacy download zh_core_web_sm  # 中文模型
-python -m spacy download en_core_web_sm  # 英文模型
-
-# 下载NLTK数据（可选，用于NLTK语义分块）
-python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
-```
+脚本会自动完成：
+- ✅ 检查 Python 版本
+- ✅ 创建虚拟环境
+- ✅ 安装所有依赖（包括 rank_bm25、FlagEmbedding、huggingface_hub）
+- ✅ 检查并安装 Ollama（可选）
+- ✅ 下载 Ollama 模型（可选）
+- ✅ 下载重排序模型（可选）
+- ✅ 安装 spaCy 模型（可选）
+- ✅ 下载 NLTK 数据（可选）
+- ✅ 创建 .env 文件模板
+- ✅ 测试模块导入
 
 ### 2. 配置环境变量
 
-创建 `.env` 文件并配置以下内容：
+编辑 `.env` 文件并配置以下内容：
 
 ```bash
 # 通义千问 API 密钥
@@ -259,6 +242,10 @@ python main.py ingest
 python main.py query
 ```
 
+程序会引导您选择：
+- 检索模式（稠密/稀疏/混合）
+- 是否启用重排序
+
 输入您的问题，系统会基于您的文档进行回答。
 
 ### 6. 分块策略演示
@@ -268,13 +255,6 @@ python examples/chunking_demo.py
 ```
 
 查看各种分块策略的效果和差异。
-
-### 7. 提前下载 huggingface 的 reranker 模型
-
-```bash
-export HF_ENDPOINT=https://hf-mirror.com
-huggingface-cli download BAAI/bge-reranker-v2-m3
-```
 
 ## 支持的模型
 

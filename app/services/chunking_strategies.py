@@ -16,10 +16,7 @@ from langchain.text_splitter import (
     CharacterTextSplitter,
     TokenTextSplitter,
     MarkdownHeaderTextSplitter,
-    HTMLHeaderTextSplitter,
 )
-from langchain.text_splitter import Language
-import re
 
 
 class ChunkingStrategy(ABC):
